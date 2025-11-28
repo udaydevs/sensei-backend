@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.core import Settings
 from llama_index.core.llms import ChatMessage
-from prompt import system_prompt  
+from prompt import system_prompt
 from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.core import VectorStoreIndex
@@ -35,43 +35,58 @@ app.add_middleware(
 class Prompt(BaseModel):
     prompt: str | None = None
 
-
-embed_model = GoogleGenAIEmbedding(
-    model_name="text-embedding-004",
-    embed_batch_size=100,
-    api_key=os.getenv('GOOGLE_API_KEY'),
-    max_retries=5,
-    timeout=40,
-)
-Settings.embed_model = embed_model
-
-llm = GoogleGenAI(
-    model='gemini-2.5-flash-lite',
-    api_key=os.getenv('GOOGLE_API_KEY')
-)
-
-text_splitter = SentenceSplitter(chunk_size=1024, chunk_overlap=20)
-Settings.text_splitter = text_splitter
-
-client = QdrantClient(
-    host=os.getenv('QDRANT_HOST'),
-    api_key=os.getenv('QDRANT_API_KEY')
-)
-
-collection_name = os.getenv('QDRANT_COLLECTION_NAME')
-
-vector_store = QdrantVectorStore(client=client,collection_name=collection_name)
-index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
-query_engine = index.as_query_engine(llm=llm, similarity_top_k=2)
+# GLOBAL VARIABLES (will be filled on startup)
+query_engine = None
+llm = None
 
 
-@app.get('/')
+@app.on_event("startup")
+async def startup_event():
+    global query_engine, llm
+
+    # 1. LLM
+    llm = GoogleGenAI(
+        model='gemini-2.5-flash-lite',
+        api_key=os.getenv('GOOGLE_API_KEY')
+    )
+
+    # 2. Embeddings
+    embed_model = GoogleGenAIEmbedding(
+        model_name="text-embedding-004",
+        embed_batch_size=100,
+        api_key=os.getenv('GOOGLE_API_KEY'),
+        max_retries=5,
+        timeout=40,
+    )
+    Settings.embed_model = embed_model
+
+    # 3. Text splitter
+    text_splitter = SentenceSplitter(chunk_size=1024, chunk_overlap=20)
+    Settings.text_splitter = text_splitter
+
+    # 4. Qdrant client
+    client = QdrantClient(
+        host=os.getenv('QDRANT_HOST'),
+        api_key=os.getenv('QDRANT_API_KEY')
+    )
+
+    # 5. Vector store + index
+    collection_name = os.getenv('QDRANT_COLLECTION_NAME')
+    vector_store = QdrantVectorStore(client=client, collection_name=collection_name)
+    index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
+
+    # 6. Query engine
+    query_engine = index.as_query_engine(llm=llm, similarity_top_k=2)
+
+
+@app.get("/")
 async def root():
-    return {'message': 'Hello world'}
+    return {"message": "Hello world"}
 
-@app.post('/prompt/')
+
+@app.post("/prompt/")
 async def prompt_by_user(prompt: Prompt):
-
+    global query_engine, llm
 
     message = [
         ChatMessage(role='system', content=system_prompt),
@@ -79,8 +94,10 @@ async def prompt_by_user(prompt: Prompt):
     ]
     response = await llm.achat(messages=message)
     text = response.message.blocks[0].text.strip()
+
     if text.startswith("```"):
         text = "\n".join(text.split("\n")[1:])
     if text.endswith("```"):
         text = "\n".join(text.split("\n")[:-1])
-    return {'result' : text.strip()} 
+
+    return {"result": text.strip()}

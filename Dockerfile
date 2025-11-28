@@ -4,7 +4,7 @@ FROM python:3.11-slim
 # Set work directory
 WORKDIR /app
 
-# Install system dependencies (important for qdrant + google sdk)
+# Install system dependencies (qdrant + google sdk)
 RUN apt-get update && apt-get install -y \
     build-essential \
     libssl-dev \
@@ -23,5 +23,5 @@ COPY . .
 # Expose Cloud Run port
 ENV PORT=8080
 
-# Start FastAPI app with uvicorn
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+# Start FastAPI app
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1"]
