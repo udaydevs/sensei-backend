@@ -11,10 +11,70 @@ from llama_index.core import VectorStoreIndex
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from dotenv import load_dotenv
-import os
+from datetime import datetime, timedelta
+from fastapi import HTTPException, Security,status, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import os, jwt
 
 load_dotenv()
 app = FastAPI()
+
+security = HTTPBearer()
+SECRET_KEY = "alskdjfieansviewh23iu509r4hgvn3g948hbn3984hbnv349"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ 
+fake_user_db = {
+    'udaysingh' : {'username' : 'udaysingh', 'password' : '#1Engineer'}
+}
+
+
+class Login(BaseModel):
+    username : str
+    password : str
+
+
+@app.post('/login/')
+async def login_user(user:Login):
+    db_user = fake_user_db.get(user.username)
+    if not db_user or db_user["password"] != user.password:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid username or password",
+        )
+    token_data = {'sub' : user.username}
+    token = create_jwt_token(data=token_data)
+    return { 'token' : token, 'token_type' : 'Bearer'}
+ 
+def create_jwt_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({'exp' : expire})
+    encode_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encode_jwt
+
+def verify_jwt_token(token: str):
+    try:
+        decode_token  = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return decode_token if datetime.utcfromtimestamp(decode_token.get('exp')) >= datetime.utcnow() else None
+    except jwt.PyJWTError:
+        return None
+
+
+async def get_current_user(credentials : HTTPAuthorizationCredentials = Security(security)):
+    token = credentials.credentials
+    payloads = verify_jwt_token(token=token)
+    print(payloads)
+    if payloads is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token"
+        )
+    return payloads
+
+@app.get('/protected')
+async def protected_route(current_user : dict = Depends(get_current_user)):
+    return {'msg' : f'Hello, {current_user['sub']}!, You are authenticated.'}
 
 origins = [
     "http://localhost",
@@ -35,7 +95,6 @@ app.add_middleware(
 class Prompt(BaseModel):
     prompt: str | None = None
 
-# GLOBAL VARIABLES (will be filled on startup)
 query_engine = None
 llm = None
 
@@ -44,13 +103,11 @@ llm = None
 async def startup_event():
     global query_engine, llm
 
-    # 1. LLM
     llm = GoogleGenAI(
         model='gemini-2.5-flash-lite',
         api_key=os.getenv('GOOGLE_API_KEY')
     )
 
-    # 2. Embeddings
     embed_model = GoogleGenAIEmbedding(
         model_name="text-embedding-004",
         embed_batch_size=100,
@@ -60,28 +117,20 @@ async def startup_event():
     )
     Settings.embed_model = embed_model
 
-    # 3. Text splitter
     text_splitter = SentenceSplitter(chunk_size=1024, chunk_overlap=20)
     Settings.text_splitter = text_splitter
 
-    # 4. Qdrant client
     client = QdrantClient(
         host=os.getenv('QDRANT_HOST'),
         api_key=os.getenv('QDRANT_API_KEY')
     )
 
-    # 5. Vector store + index
     collection_name = os.getenv('QDRANT_COLLECTION_NAME')
     vector_store = QdrantVectorStore(client=client, collection_name=collection_name)
     index = VectorStoreIndex.from_vector_store(vector_store=vector_store)
 
-    # 6. Query engine
-    query_engine = index.as_query_engine(llm=llm, similarity_top_k=2)
+    query_engine = index.as_query_engine(llm=llm, similarity_top_k=2 , vector_store_query_mode ='hybrid' )
 
-
-@app.get("/")
-async def root():
-    return {"message": "Hello world"}
 
 
 @app.post("/prompt/")
@@ -100,4 +149,4 @@ async def prompt_by_user(prompt: Prompt):
     if text.endswith("```"):
         text = "\n".join(text.split("\n")[:-1])
 
-    return {"result": text.strip()}
+    return text.strip()
