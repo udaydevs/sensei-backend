@@ -1,11 +1,9 @@
 """
 This is the main file
 """
-
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.core import Settings
 from llama_index.core.llms import ChatMessage
@@ -15,8 +13,10 @@ from llama_index.core import VectorStoreIndex
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from dotenv import load_dotenv
+from app.models.promt_model import Prompt
 from app.prompt import SYSTEM_PROMPT
 load_dotenv()
+
 app = FastAPI()
 
 origins = [
@@ -34,9 +34,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-class Prompt(BaseModel):
-    prompt: str | None = None
 
 query_engine = None
 llm = None
@@ -103,5 +100,4 @@ async def prompt_by_user(prompt: Prompt):
         text = "\n".join(text.split("\n")[1:])
     if text.endswith("```"):
         text = "\n".join(text.split("\n")[:-1])
-
     return text.strip()
