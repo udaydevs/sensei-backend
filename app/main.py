@@ -13,7 +13,7 @@ from llama_index.core import VectorStoreIndex
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from dotenv import load_dotenv
-from app.models.promt_model import Prompt
+from app.models.prompt_model import Prompt
 from app.prompt import SYSTEM_PROMPT
 load_dotenv()
 
