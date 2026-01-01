@@ -19,7 +19,7 @@ async def prompt_by_user(prompt: Prompt):
             detail='LLM is not working properly',
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE
         )
-    
+
     message = [
         ChatMessage(role='system', content=SYSTEM_PROMPT),
         ChatMessage(

@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from app.api import auth, chat
 from app.core.config import settings
 from app.core.startup import llm_manager
+from app.core.database import Base, engine
 load_dotenv()
 
 app = FastAPI()
@@ -30,6 +31,7 @@ if settings.all_cors_origin:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+Base.metadata.create_all(bind=engine)
 
 @app.on_event("startup")
 async def startup_event():

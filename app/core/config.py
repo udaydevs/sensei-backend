@@ -23,7 +23,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
     SECRET_KEY : str = secrets.token_urlsafe(32)
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60*24*8
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 11520
     FRONTEND_HOST : str = "https://localhost:3000"
     ENVIRONMENT : Literal["local", "staging", "production"] = "local"
     BACKEND_CORS_ORIGIN: Annotated[
