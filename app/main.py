@@ -31,7 +31,13 @@ if settings.all_cors_origin:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
 Base.metadata.create_all(bind=engine)
+
+@app.get("check_health")
+async def health_check():
+    """Check health for production"""
+    return {"message" : "Alive!"}
 
 @app.on_event("startup")
 async def startup_event():
