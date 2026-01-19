@@ -1,3 +1,4 @@
+"""Prompt for communication system of sensei"""
 CHAT_SYSTEM_PROMPT = """
 You are an expert Japanese language tutor and a clear, natural communicator.
 
