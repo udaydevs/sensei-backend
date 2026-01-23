@@ -1,8 +1,13 @@
 """All the configurations are defined here"""
+from pathlib import Path
 import secrets
 from typing import Literal, Annotated,Any
-from pydantic import BeforeValidator, AnyUrl, computed_field
+from pydantic import BeforeValidator, AnyUrl, PostgresDsn, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+
 
 def parse_cors(v: Any) -> list[str] | str:
     """
@@ -18,7 +23,7 @@ def parse_cors(v: Any) -> list[str] | str:
 class Settings(BaseSettings):
     """Setting Configurations"""
     model_config = SettingsConfigDict(
-        env_file="../.env",
+        env_file=BASE_DIR/'.env',
         env_ignore_empty=True,
         extra="ignore",
     )
@@ -37,6 +42,25 @@ class Settings(BaseSettings):
         return [str(origin).rstrip('/') for origin in self.BACKEND_CORS_ORIGIN] + [
             self.FRONTEND_HOST
         ]
+
+    POSTGRES_SERVER : str
+    POSTGRES_PORT : int
+    POSTGRES_USER : str
+    POSTGRES_PASSWORD : str
+    POSTGRES_DB : str
+
+    @computed_field
+    @property
+    def SQLALCHEMY_POSTGRES_URL(self) -> PostgresDsn:
+        """Function to build a sqlalchemy db url"""
+        return PostgresDsn.build(
+            scheme="postgresql+psycopg2",
+            username=self.POSTGRES_USER,
+            password=self.POSTGRES_PASSWORD,
+            host=self.POSTGRES_SERVER,
+            port=self.POSTGRES_PORT,
+            path=self.POSTGRES_DB
+        )
 
 
 settings = Settings()

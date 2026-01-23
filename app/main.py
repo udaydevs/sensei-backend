@@ -4,7 +4,7 @@ This is the main file
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from app.api import auth, chat
+from app.api import auth, chatbot, tranlator
 from app.core.config import settings
 from app.core.startup import llm_manager
 from app.core.database import Base, engine
@@ -13,8 +13,8 @@ load_dotenv()
 app = FastAPI()
 
 app.include_router(auth.router)
-app.include_router(chat.router)
-
+app.include_router(tranlator.router)
+app.include_router(chatbot.router)
 origins = [
     "http://localhost",
     "http://localhost:3000",

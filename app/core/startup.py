@@ -44,14 +44,16 @@ class LLMManager():
 
         vector_store = QdrantVectorStore(
             client=client,
-            collection_name=os.getenv("QDRANT_COLLECTION_NAME")
+            collection_name=os.getenv("QDRANT_COLLECTION_NAME"),
+            # enable_hybrid=True 
         )
 
         index = VectorStoreIndex.from_vector_store(vector_store)
         self.query_engine = index.as_query_engine(
             llm=self.llm,
             similarity_top_k=2,
-            vector_store_query_mode="hybrid"
+            # vector_store_query_mode="hybrid",
+            # enable_hybrid=True,
         )
 
 llm_manager = LLMManager()

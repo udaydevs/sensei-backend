@@ -1,7 +1,7 @@
 """User Model"""
 from pydantic import BaseModel
-from sqlalchemy import Column, Integer, String, TIMESTAMP, Boolean, text
 from pydantic import EmailStr
+from sqlalchemy import Column, Integer, String, TIMESTAMP, Boolean, text
 from app.core.database import Base
 
 
