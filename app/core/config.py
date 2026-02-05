@@ -62,5 +62,9 @@ class Settings(BaseSettings):
             path=self.POSTGRES_DB
         )
 
+    LLM_API_KEY: str
+    QDRANT_DB_COLLECTION: str
+    QDRANT_DB_API_KEY: str
+    QDRANT_DB_HOST : str
 
 settings = Settings()

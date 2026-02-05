@@ -6,7 +6,8 @@ from dotenv import load_dotenv
 from fastapi import APIRouter, WebSocket
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
-from langchain_google_genai import GoogleGenerativeAI
+# from langchain_google_genai import GoogleGenerativeAI
+from langchain_groq import ChatGroq
 from langchain_core.messages import BaseMessage, HumanMessage
 from app.prompts.chat import CHAT_SYSTEM_PROMPT
 from app.core.startup import llm_manager
@@ -17,10 +18,14 @@ router = APIRouter(
     prefix='/chatbot'
 )
 
-model = GoogleGenerativeAI(
-        model="gemini-2.5-flash-lite",
-        google_api_key=os.getenv('GOOGLE_API_KEY')
-    )
+# model = GoogleGenerativeAI(
+#         model="gemini-2.5-flash-lite",
+#         google_api_key=os.getenv('GOOGLE_API_KEY')
+#     )
+model = ChatGroq(
+    model="llama-3.1-8b-instant",
+    api_key=os.getenv("GROQ_API_KEY")
+)
 
 class ChatBot(TypedDict):
     """
@@ -98,6 +103,6 @@ async def conversation(websocket: WebSocket) -> str:
         result = chatbot.invoke(state)
         state = result
 
-        ai_message = result["messages"][-1]
+        ai_message = result["message"][-1]
         await websocket.send_text(ai_message.content)
 
