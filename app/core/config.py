@@ -61,8 +61,9 @@ class Settings(BaseSettings):
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB
         )
-
+    LLM_MODEL_NAME: str
     LLM_API_KEY: str
+    EMBEDDING_MODEL_NAME: str
     QDRANT_DB_COLLECTION: str
     QDRANT_DB_API_KEY: str
     QDRANT_DB_HOST : str

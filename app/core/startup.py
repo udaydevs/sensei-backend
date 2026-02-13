@@ -20,12 +20,12 @@ class LLMManager():
         """Run when the server starts"""
 
         self.llm = GoogleGenAI(
-            model="gemini-2.5-flash-lite",
+            model=settings.LLM_MODEL_NAME,
             api_key=settings.LLM_API_KEY
         )
 
         Settings.embed_model = GoogleGenAIEmbedding(
-            model_name="text-embedding-004",
+            model_name=settings.EMBEDDING_MODEL_NAME,
             embed_batch_size=100,
             api_key=settings.LLM_API_KEY,
             max_retries=5,
@@ -45,15 +45,15 @@ class LLMManager():
         vector_store = QdrantVectorStore(
             client=client,
             collection_name=settings.QDRANT_DB_COLLECTION,
-            # enable_hybrid=True 
+            enable_hybrid=True 
         )
 
         index = VectorStoreIndex.from_vector_store(vector_store)
         self.query_engine = index.as_query_engine(
             llm=self.llm,
             similarity_top_k=2,
-            # vector_store_query_mode="hybrid",
-            # enable_hybrid=True,
+            vector_store_query_mode="hybrid",
+            enable_hybrid=True,
         )
 
 llm_manager = LLMManager()
