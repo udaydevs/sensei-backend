@@ -45,7 +45,7 @@ class LLMManager():
         vector_store = QdrantVectorStore(
             client=client,
             collection_name=settings.QDRANT_DB_COLLECTION,
-            enable_hybrid=True 
+            enable_hybrid=True
         )
 
         index = VectorStoreIndex.from_vector_store(vector_store)
