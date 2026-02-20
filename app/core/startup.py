@@ -41,7 +41,6 @@ class LLMManager():
             host=settings.QDRANT_DB_HOST,
             api_key=settings.QDRANT_DB_API_KEY
         )
-
         vector_store = QdrantVectorStore(
             client=client,
             collection_name=settings.QDRANT_DB_COLLECTION,
