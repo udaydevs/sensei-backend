@@ -66,6 +66,6 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL_NAME: str
     QDRANT_DB_COLLECTION: str
     QDRANT_DB_API_KEY: str
-    QDRANT_DB_HOST : str
+    QDRANT_DB_URL : str
 
 settings = Settings()

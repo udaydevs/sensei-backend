@@ -1,35 +1,30 @@
-"""The function that are going to run on startup"""
 from llama_index.llms.google_genai import GoogleGenAI
 from llama_index.core import Settings, VectorStoreIndex
-from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.core.node_parser import SentenceSplitter
 from llama_index.vector_stores.qdrant import QdrantVectorStore
 from qdrant_client import QdrantClient
 from app.core.config import settings
 
-llm = None
-query_engine = None
 
-class LLMManager():
-    """Here the llm and query engines are defined"""
+class LLMManager:
+    """Initializes LLM and Query Engine"""
+
     def __init__(self):
         self.llm = None
         self.query_engine = None
 
     def init(self):
-        """Run when the server starts"""
-
+        """
+        Initialize all AI system components.
+        """
         self.llm = GoogleGenAI(
             model=settings.LLM_MODEL_NAME,
             api_key=settings.LLM_API_KEY
         )
 
-        Settings.embed_model = GoogleGenAIEmbedding(
-            model_name=settings.EMBEDDING_MODEL_NAME,
-            embed_batch_size=100,
-            api_key=settings.LLM_API_KEY,
-            max_retries=5,
-            timeout=40,
+        Settings.embed_model = HuggingFaceEmbedding(
+            model_name="BAAI/bge-large-en-v1.5"
         )
 
         Settings.text_splitter = SentenceSplitter(
@@ -38,21 +33,20 @@ class LLMManager():
         )
 
         client = QdrantClient(
-            host=settings.QDRANT_DB_HOST,
+            url=settings.QDRANT_DB_URL,
             api_key=settings.QDRANT_DB_API_KEY
         )
+
         vector_store = QdrantVectorStore(
             client=client,
-            collection_name=settings.QDRANT_DB_COLLECTION,
-            enable_hybrid=True
+            collection_name=settings.QDRANT_DB_COLLECTION
         )
 
         index = VectorStoreIndex.from_vector_store(vector_store)
+
         self.query_engine = index.as_query_engine(
             llm=self.llm,
-            similarity_top_k=2,
-            vector_store_query_mode="hybrid",
-            enable_hybrid=True,
+            similarity_top_k=3
         )
 
 llm_manager = LLMManager()

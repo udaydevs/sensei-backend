@@ -6,11 +6,12 @@ from dotenv import load_dotenv
 from fastapi import APIRouter, WebSocket
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
-# from langchain_google_genai import GoogleGenerativeAI
+from langchain_google_genai import GoogleGenerativeAI
 from langchain_groq import ChatGroq
 from langchain_core.messages import BaseMessage, HumanMessage
 from app.prompts.chat import CHAT_SYSTEM_PROMPT
 from app.core.startup import llm_manager
+from app.core.config import settings
 
 load_dotenv()
 
@@ -18,14 +19,14 @@ router = APIRouter(
     prefix='/chatbot'
 )
 
-# model = GoogleGenerativeAI(
-#         model="gemini-2.5-flash-lite",
-#         google_api_key=os.getenv('GOOGLE_API_KEY')
-#     )
-model = ChatGroq(
-    model="llama-3.1-8b-instant",
-    api_key=os.getenv("GROQ_API_KEY")
-)
+model = GoogleGenerativeAI(
+        model="gemini-2.5-flash-lite",
+        google_api_key=settings.LLM_API_KEY
+    )
+# model = ChatGroq(
+#     model="llama-3.1-8b-instant",
+#     api_key=os.getenv("GROQ_API_KEY")
+# )
 
 class ChatBot(TypedDict):
     """
@@ -42,7 +43,7 @@ def context_node(state: ChatBot):
     :type state: ChatBot
     """
     message = state["message"][-1].content
-    rag_result = llm_manager.query_engine.query(message)
+    rag_result = llm_manager.query_engine.aquery(message)
     return {"context": str(rag_result)}
 
 def llm_node(state: ChatBot):

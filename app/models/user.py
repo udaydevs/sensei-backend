@@ -23,7 +23,9 @@ class Token(BaseModel):
     token_type : str
 
 class Users(Base):
-    """DB model for user details"""
+    """
+    DB model for user details
+    """
     __tablename__= 'Users'
     id = Column(Integer, primary_key=True, nullable=False)
     name = Column(String)
