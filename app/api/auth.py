@@ -1,6 +1,6 @@
 """The apis for the authentication purpose"""
 from typing import Annotated
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Response
 from fastapi.security import  OAuth2PasswordRequestForm
 from passlib.context import CryptContext
 from starlette import status
@@ -14,7 +14,7 @@ router = APIRouter(prefix='/auth')
 @router.post('/register')
 async def create_user(user: Register, db:DbDependency):
     """
-    Creates a new user using registration details(name, email and password)
+    Creates a new user using registration details (name, email and password)
     """
     get_user = db.query(Users).filter(Users.email == user.email).first()
     if get_user:
@@ -26,7 +26,7 @@ async def create_user(user: Register, db:DbDependency):
     )
     db.add(user_model)
     db.commit()
-    return {"msg" : "User Created Successfully", "status_code" : status.HTTP_201_CREATED}
+    return Response({"msg" : "User Created Successfully"}, status_code=status.HTTP_201_CREATED)
 
 def authenticate_user(email: str, password: str, db):
     """Verifies the username nad password """
@@ -38,7 +38,11 @@ def authenticate_user(email: str, password: str, db):
     return user
 
 @router.post('/login')
-async def login_user(user:Annotated[OAuth2PasswordRequestForm, Depends()], db: DbDependency):
+async def login_user(
+    response: Response,
+    user:Annotated[OAuth2PasswordRequestForm, Depends()],
+    db: DbDependency
+    ):
     """
     Generation of the token and authentication takes place
     """
@@ -49,9 +53,12 @@ async def login_user(user:Annotated[OAuth2PasswordRequestForm, Depends()], db: D
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password",
         )
-    token_data = {'name' : current_user.name, 'email' : current_user.email}
-    token = create_jwt_token(data=token_data)
-    return { 'token' : token, 'token_type' : 'bearer'}
+    token = create_jwt_token(data={
+        'name' : current_user.name,
+        'email' : current_user.email
+    })
+    response.set_cookie(key='access_token', value=f'Bearer {token}', httponly=True)
+    return { 'msg' : 'Logged In successfully','status_code':status.HTTP_200_OK}
 
 @router.get('/protected')
 async def protected_route(current_user : dict = Depends(get_current_user)):
