@@ -15,18 +15,12 @@ app = FastAPI()
 app.include_router(auth.router)
 app.include_router(tranlator.router)
 app.include_router(chatbot.router)
-origins = [
-    "http://localhost",
-    "http://localhost:3000",
-    "http://192.168.1.14:3000",
-    "https://dashboard-mu-neon-70.vercel.app",
-    "https://keven-submissive-unmystically.ngrok-free.dev"
-]
+
 
 if settings.all_cors_origin:
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=origins,
+        allow_origins=settings.all_cors_origin,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

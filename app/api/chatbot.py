@@ -1,109 +1,91 @@
-"""Chatbot using langgraph"""
-import os
-from typing import List, TypedDict, Annotated
-# from llama_index.core.prompts import ChatMessage
+import uuid
+from typing import TypedDict, Annotated
 from dotenv import load_dotenv
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph.message import add_messages
 from langchain_google_genai import GoogleGenerativeAI
-from langchain_groq import ChatGroq
-from langchain_core.messages import BaseMessage, HumanMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langchain_core.runnables import RunnableConfig
 from app.prompts.chat import CHAT_SYSTEM_PROMPT
 from app.core.startup import llm_manager
 from app.core.config import settings
 
 load_dotenv()
 
-router = APIRouter(
-    prefix='/chatbot'
-)
+router = APIRouter(prefix='/chatbot')
 
 model = GoogleGenerativeAI(
-        model="gemini-2.5-flash-lite",
-        google_api_key=settings.LLM_API_KEY
-    )
-# model = ChatGroq(
-#     model="llama-3.1-8b-instant",
-#     api_key=os.getenv("GROQ_API_KEY")
-# )
+    model="gemini-2.5-flash-lite",
+    google_api_key=settings.LLM_API_KEY
+)
+
+checkpointer = InMemorySaver()
 
 class ChatBot(TypedDict):
-    """
-    Docstring for ChatBot
-    """
-    message : Annotated[list[BaseMessage], add_messages]
-    context : str
+    """State for chatbot graph"""
+    messages: Annotated[list[BaseMessage], add_messages]
+    context: str
 
 def context_node(state: ChatBot):
-    """
-    Docstring for chat_node
-    
-    :param state: Description
-    :type state: ChatBot
-    """
-    message = state["message"][-1].content
-    rag_result = llm_manager.query_engine.aquery(message)
+    """Retrieve context from RAG engine"""
+    user_message = state["messages"][-1].content
+
+    rag_result = llm_manager.query_engine.query(user_message)
     return {"context": str(rag_result)}
 
 def llm_node(state: ChatBot):
-    """
-    Uses LangChain LLM with retrieved context.
-    """
-    messages = state["message"]
+    """Generate response using LLM with retrieved context"""
+    messages = state["messages"]
 
-    prompt = [
-        HumanMessage(
-            content=f"""{CHAT_SYSTEM_PROMPT}Context:{state['context']}"""
-        ),*messages,
-    ]
+    system_prompt = f"{CHAT_SYSTEM_PROMPT}\n\nContext: {state['context']}"
 
-    response = model.invoke(prompt)
-    return {"message":[response]}
+    response = model.invoke(
+        [
+            {"role": "system", "content": system_prompt},
+            *[
+                {
+                    "role": "user" if hasattr(m, "content") and isinstance(m, HumanMessage) else "assistant",
+                    "content": m.content
+                }
+                for m in messages
+            ]
+        ]
+    )
+
+    return {"messages": [AIMessage(content=response)]}
 
 graph = StateGraph(ChatBot)
+graph.add_node("context_node", context_node)
+graph.add_node("llm_node", llm_node)
+graph.add_edge(START, "context_node")
+graph.add_edge("context_node", "llm_node")
+graph.add_edge("llm_node", END)
 
-graph.add_node('context_node', context_node)
-graph.add_node('llm_node', llm_node)
-graph.add_edge(START, 'context_node')
-graph.add_edge('context_node', 'llm_node')
-graph.add_edge('llm_node' , END)
-
-chatbot = graph.compile()
+chatbot = graph.compile(checkpointer=checkpointer)
 
 @router.websocket("/talk")
-async def conversation(websocket: WebSocket) -> str:
+async def conversation(websocket: WebSocket):
     """
-    Chat route which used for one to one communication with user
+    Talk route inbuilt with streaming service
     """
-
-
     await websocket.accept()
-    state: ChatBot = {
-        "message": [HumanMessage(content=CHAT_SYSTEM_PROMPT)],
-        "context": "",
-    }
-    while True:
-        user_prompt = await websocket.receive_text()
 
-        # message = [
-        #     ChatMessage(role='system', content=CHAT_SYSTEM_PROMPT),
-        #     ChatMessage(
-        #         role='user',
-        #         content=f"context:\n{llm_manager.query_engine}\n\nuser prompt:\n{user_prompt}")
-        # ]
+    thread_id = str(uuid.uuid4())
+    config = {"configurable": {"thread_id": thread_id}}
 
-        # stream = await llm_manager.llm.astream_chat(message)
-        # async for chunk in stream:
-        #     text = chunk.delta or ""
-        #     if text:
-        #         await websocket.send_text(text)
-        state["message"].append(
-            HumanMessage(content=user_prompt)
-        )
-        result = chatbot.invoke(state)
-        state = result
+    try:
+        while True:
+            user_prompt = await websocket.receive_text()
 
-        ai_message = result["message"][-1]
-        await websocket.send_text(ai_message.content)
+            async for message, metadata in chatbot.astream(
+                {"messages": [HumanMessage(content=user_prompt)]},
+                config=config,
+                stream_mode="messages"
+            ):
+                if isinstance(message, AIMessage) and message.content:
+                    await websocket.send_text(message.content)
 
+    except WebSocketDisconnect:
+        print("Client disconnected")

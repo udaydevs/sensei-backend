@@ -1,13 +1,11 @@
 """All the configurations are defined here"""
 from pathlib import Path
-import secrets
 from typing import Literal, Annotated,Any
 from pydantic import BeforeValidator, AnyUrl, PostgresDsn, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
-
 
 def parse_cors(v: Any) -> list[str] | str:
     """
@@ -27,13 +25,13 @@ class Settings(BaseSettings):
         env_ignore_empty=True,
         extra="ignore",
     )
-    SECRET_KEY : str = secrets.token_urlsafe(32)
+    SECRET_KEY : str
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 11520
-    FRONTEND_HOST : str = "https://localhost:3000"
+    FRONTEND_HOST : str = "http://localhost:3000"
     ENVIRONMENT : Literal["local", "staging", "production"] = "local"
     BACKEND_CORS_ORIGIN: Annotated[
         list[AnyUrl] | str, BeforeValidator(parse_cors)
-    ] = []
+    ]
 
     @computed_field
     @property

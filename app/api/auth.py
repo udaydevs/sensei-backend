@@ -54,15 +54,22 @@ async def login_user(
             detail="Invalid username or password",
         )
     token = create_jwt_token(data={
+        'id' : current_user.id,
         'name' : current_user.name,
         'email' : current_user.email
     })
-    response.set_cookie(key='access_token', value=f'Bearer {token}', httponly=True)
+    response.set_cookie(
+        key='access_token',
+        value=f'Bearer {token}',
+        httponly=True,
+        secure=True,
+        samesite='none'
+    )
     return { 'msg' : 'Logged In successfully','status_code':status.HTTP_200_OK}
 
-@router.get('/protected')
-async def protected_route(current_user : dict = Depends(get_current_user)):
+@router.get('/profile')
+async def user_details(current_user : dict = Depends(get_current_user)):
     """
-    Test route
+    Route that return current_user details
     """
-    return {'msg' : f'Hello, {current_user['sub']}!, You are authenticated.'}
+    return current_user

@@ -1,12 +1,11 @@
 """Authentication securities are defined here"""
 from typing import Annotated
 from datetime import datetime, timedelta, timezone
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
 from starlette import status
 from jose import jwt, JWTError
 from app.core.config import settings
-from app.models.user import Login
 
 ALGORITHM = 'HS256'
 oauth2_bearer = OAuth2PasswordBearer(tokenUrl="auth/token")
@@ -32,13 +31,21 @@ def verify_jwt_token(token: str):
     except JWTError as e:
         return e
 
-async def get_current_user(credentials : Annotated[str, Depends(oauth2_bearer)]):
+async def get_current_user(request : Request) -> dict:
     """
     To get the current user on every request
     """
-    token = credentials.credentials
+    token = request.cookies.get("access_token")
+    print(token)
+    if token:
+        token = token.split(" ")[1]
+    else:raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate user"
+    )
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=ALGORITHM)
+        token = request.cookies.get("access_token").split(" ")[1]
+        payload = jwt.decode(token, key=settings.SECRET_KEY, algorithms=ALGORITHM)
         email : str = payload.get('email')
         user_id : int = payload.get('id')
         name : str = payload.get('name')
@@ -49,6 +56,7 @@ async def get_current_user(credentials : Annotated[str, Depends(oauth2_bearer)])
             )
         return {"name": name, "user_id": user_id, "email" : email}
     except JWTError:
+        print('hello')
         return HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail= "Could not validate user"
