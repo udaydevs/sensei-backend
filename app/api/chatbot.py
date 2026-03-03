@@ -7,7 +7,6 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph.message import add_messages
 from langchain_google_genai import GoogleGenerativeAI
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
-from langchain_core.runnables import RunnableConfig
 from app.prompts.chat import CHAT_SYSTEM_PROMPT
 from app.core.startup import llm_manager
 from app.core.config import settings

@@ -6,7 +6,9 @@ from passlib.context import CryptContext
 from starlette import status
 from app.core.database import DbDependency
 from app.core.security import create_jwt_token, get_current_user
-from app.models.user import Users, Register
+from app.models.schema.user import  Register
+from app.models.db_models.user import Users
+
 
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated = 'auto')
 router = APIRouter(prefix='/auth')

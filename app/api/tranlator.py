@@ -1,7 +1,7 @@
 """Routes for chat application"""
 from llama_index.core.prompts import ChatMessage
 from fastapi import APIRouter, HTTPException, status
-from app.models.user_prompt import Prompt
+from app.models.schema.user_prompt import Prompt
 from app.prompts.prompt import SYSTEM_PROMPT
 from app.core.startup import llm_manager
 

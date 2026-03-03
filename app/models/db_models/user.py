@@ -1,26 +1,6 @@
 """User Model"""
-from pydantic import BaseModel
-from pydantic import EmailStr
 from sqlalchemy import Column, Integer, String, TIMESTAMP, Boolean, text
 from app.core.database import Base
-
-
-class Register(BaseModel):
-    """
-    Model for authentication
-    """
-    name : str
-    email: EmailStr
-    password : str
-class Login(BaseModel):
-    """Login Model"""
-    email : EmailStr
-    password : str
-
-class Token(BaseModel):
-    """Token model"""
-    access_token : str
-    token_type : str
 
 class Users(Base):
     """

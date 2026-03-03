@@ -28,7 +28,7 @@ if settings.all_cors_origin:
 
 Base.metadata.create_all(bind=engine)
 
-@app.get("check_health")
+@app.get("/check_health")
 async def health_check():
     """Check health for production"""
     return {"message" : "Alive!"}
@@ -39,29 +39,3 @@ async def startup_event():
     This function work on the start of the server
     """
     llm_manager.init()
-
-
-
-# @app.websocket("/response/")
-# async def response(websocket : WebSocket) -> str:
-#     """Steaming llm response"""
-
-#     global llm, query_engine
-
-#     await websocket.accept()
-#     while True:
-#         user_prompt = await websocket.receive_text()
-
-#         message = [
-#             ChatMessage(role='system', content=SYSTEM_PROMPT),
-#             ChatMessage(
-#                 role='user',
-#                 content=f"context:\n{query_engine}\n\nuser prompt:\n{user_prompt}")
-#         ]
-#         stream = await llm.astream_chat(message)
-#         async for chunk in stream:
-#             text = chunk.delta or ""
-#             if text:
-#                 await websocket.send_text(text)
-
-#         await websocket.send_text("[[END]]")
